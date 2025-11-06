@@ -1,0 +1,9 @@
+services:
+  postgres:
+    image: 'postgres:17-alpine'
+    environment:
+      - 'POSTGRES_DB=beginning_gg'
+      - 'POSTGRES_USER=beginning_dot_gg'
+      - 'POSTGRES_PASSWORD=dot_gg_password'
+    ports:
+      - '5432:5432'
