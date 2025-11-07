@@ -59,6 +59,18 @@ interface NewMessageFormProps {
     initialText?: string;
 }
 
+interface AlertModalProps {
+    message: string;
+    onClose: () => void;
+    type?: 'error' | 'info' | 'warning';
+}
+
+interface ConfirmModalProps {
+    message: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+}
+
 // ==================== API Configuration and Helpers ====================
 
 const API_BASE_URL = 'http://localhost:8080/api/users';
@@ -149,6 +161,57 @@ const modifyExistingMessage = async (userId: number, messageId: number, newText:
 
     const messageDto: UserMessageDTO = await response.json();
     return transformMessage(messageDto);
+};
+
+// ==================== Alert and Confirm Modals ====================
+const AlertModal: React.FC<AlertModalProps> = ({ message, onClose, type = 'info' }) => {
+    const colors = {
+        error: 'border-red-500/50 from-red-600 to-pink-600',
+        warning: 'border-yellow-500/50 from-yellow-600 to-orange-600',
+        info: 'border-blue-500/50 from-blue-600 to-purple-600'
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+            <div className={`bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 border ${colors[type]}`}>
+                <div className="text-center">
+                    <p className="text-white text-lg mb-6">{message}</p>
+                    <button
+                        onClick={onClose}
+                        className={`w-full bg-gradient-to-r ${colors[type]} text-white py-3 rounded-lg hover:opacity-90 transition-opacity font-semibold`}
+                    >
+                        OK
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const ConfirmModal: React.FC<ConfirmModalProps> = ({ message, onConfirm, onCancel }) => {
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 border border-red-500/50">
+                <div className="text-center">
+                    <p className="text-white text-lg mb-6">{message}</p>
+                    <div className="flex space-x-3">
+                        <button
+                            onClick={onCancel}
+                            className="flex-1 px-6 py-3 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors font-semibold"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={onConfirm}
+                            className="flex-1 bg-gradient-to-r from-red-600 to-pink-600 text-white py-3 rounded-lg hover:from-red-700 hover:to-pink-700 transition-colors font-semibold"
+                        >
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 };
 
 // ==================== Login Modal (Themed) ====================
@@ -623,6 +686,8 @@ export const PostingBoard: React.FC = () => {
     const [showLoginModal, setShowLoginModal] = useState(false);
     const [editingMessage, setEditingMessage] = useState<Message | null>(null);
     const [loading, setLoading] = useState(true);
+    const [alertModal, setAlertModal] = useState<{ message: string; type: 'error' | 'info' | 'warning' } | null>(null);
+    const [confirmModal, setConfirmModal] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
     const refreshMessages = async () => {
         try {
@@ -636,10 +701,11 @@ export const PostingBoard: React.FC = () => {
     };
 
     useEffect(() => {
-        const savedUser = sessionStorage.getItem('currentUser');
-        if (savedUser) {
-            setUser(JSON.parse(savedUser));
-        }
+        // Force logout on page reload
+        sessionStorage.removeItem('currentUser');
+        sessionStorage.removeItem('jwtToken');
+        setUser(null);
+
         refreshMessages();
     }, []);
 
@@ -657,7 +723,7 @@ export const PostingBoard: React.FC = () => {
             setShowLoginModal(false);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Login failed.';
-            alert(errorMessage);
+            setAlertModal({ message: errorMessage, type: 'error' });
             sessionStorage.removeItem('currentUser');
             sessionStorage.removeItem('jwtToken');
         }
@@ -672,7 +738,7 @@ export const PostingBoard: React.FC = () => {
 
     const createMessage = async (text: string, image: File | null, recording: File | null) => {
         if (!user) {
-            alert("You must be logged in to post a message.");
+            setAlertModal({ message: "You must be logged in to post a message.", type: 'warning' });
             return;
         }
         try {
@@ -680,7 +746,7 @@ export const PostingBoard: React.FC = () => {
             await refreshMessages();
         } catch (error) {
             console.error("Failed to create message:", error);
-            alert("Could not post message. Please ensure you are logged in and try again.");
+            setAlertModal({ message: "Could not post message. Please ensure you are logged in and try again.", type: 'error' });
         }
     };
 
@@ -692,16 +758,20 @@ export const PostingBoard: React.FC = () => {
             setEditingMessage(null);
         } catch (error) {
             console.error("Failed to update message:", error);
-            alert("Could not update message. Please try again.");
+            setAlertModal({ message: "Could not update message. Please try again.", type: 'error' });
         }
     };
 
     const deleteMessage = (messageId: number) => {
         if (!user) return;
-        if (window.confirm('Are you sure you want to delete this message?')) {
-            console.warn(`[API TO DO] Attempted to delete message ID: ${messageId}. Need to implement DELETE API call.`);
-            refreshMessages();
-        }
+        setConfirmModal({
+            message: 'Are you sure you want to delete this message?',
+            onConfirm: () => {
+                console.warn(`[API TO DO] Attempted to delete message ID: ${messageId}. Need to implement DELETE API call.`);
+                refreshMessages();
+                setConfirmModal(null);
+            }
+        });
     };
 
     return (
@@ -710,6 +780,22 @@ export const PostingBoard: React.FC = () => {
                 <NavBar user={user} onLogout={logout} onLoginClick={() => setShowLoginModal(true)} />
 
                 {showLoginModal && <LoginModal onLogin={login} onClose={() => setShowLoginModal(false)} />}
+
+                {alertModal && (
+                    <AlertModal
+                        message={alertModal.message}
+                        type={alertModal.type}
+                        onClose={() => setAlertModal(null)}
+                    />
+                )}
+
+                {confirmModal && (
+                    <ConfirmModal
+                        message={confirmModal.message}
+                        onConfirm={confirmModal.onConfirm}
+                        onCancel={() => setConfirmModal(null)}
+                    />
+                )}
 
                 <main className="max-w-4xl mx-auto px-4 py-8">
                     <div className="text-center mb-12">
