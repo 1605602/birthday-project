@@ -43,7 +43,6 @@ public class FileService {
     }
 
     public byte[] decryptFile(byte[] encryptedData) throws Exception {
-        // Extract IV (first 12 bytes)
         byte[] iv = new byte[12];
         System.arraycopy(encryptedData, 0, iv, 0, 12);
 

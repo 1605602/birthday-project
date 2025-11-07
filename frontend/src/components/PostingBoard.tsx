@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavBar } from './NavBar';
-import { MessageSquare, Edit2, Trash2, Send, X, Image, Mic } from 'lucide-react';
+import { MessageSquare, Edit2, Trash2, Send, X, Image, Mic, Square } from 'lucide-react';
 
 // ==================== Types ====================
 interface User {
@@ -30,7 +30,6 @@ interface UserMessageDTO {
     text: string;
     user: DiscordUserDTO;
     createdAt: string;
-    // 🟢 CHANGED: Boolean flags instead of paths
     hasImage: boolean;
     hasRecording: boolean;
     imageFilename: string | null;
@@ -208,7 +207,6 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, currentUser, onEdit,
     const [imageError, setImageError] = useState(false);
     const [audioError, setAudioError] = useState(false);
 
-    // Construct the full URL for the image
     const imageSource = message.hasImage
         ? `${API_BASE_URL}/messages/${message.id}/image`
         : null;
@@ -240,12 +238,10 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, currentUser, onEdit,
                 )}
             </div>
 
-            {/* Message Text */}
             {message.text && (
                 <p className="text-gray-300 whitespace-pre-wrap mb-4">{message.text}</p>
             )}
 
-            {/* Image Display */}
             {imageSource && !imageError && (
                 <div className="mb-4 bg-gray-900 rounded-lg p-2">
                     <img
@@ -266,7 +262,6 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, currentUser, onEdit,
                 </div>
             )}
 
-            {/* Audio Player */}
             {recordingSource && !audioError && (
                 <div className="mb-4 bg-gray-900 rounded-lg p-4">
                     <div className="flex items-center space-x-3 mb-2">
@@ -299,14 +294,155 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, currentUser, onEdit,
     );
 };
 
+// ==================== Voice Recorder Component ====================
+const VoiceRecorder: React.FC<{ onRecordingComplete: (file: File) => void; onCancel: () => void }> = ({ onRecordingComplete, onCancel }) => {
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordingTime, setRecordingTime] = useState(0);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const chunksRef = useRef<Blob[]>([]);
+    const timerRef = useRef<number | null>(null);
+
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mediaRecorder = new MediaRecorder(stream);
+            mediaRecorderRef.current = mediaRecorder;
+            chunksRef.current = [];
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) {
+                    chunksRef.current.push(e.data);
+                }
+            };
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+                const file = new File([blob], `recording-${Date.now()}.webm`, { type: 'audio/webm' });
+                onRecordingComplete(file);
+                stream.getTracks().forEach(track => track.stop());
+            };
+
+            mediaRecorder.start();
+            setIsRecording(true);
+            setRecordingTime(0);
+
+            timerRef.current = window.setInterval(() => {
+                setRecordingTime(prev => prev + 1);
+            }, 1000);
+        } catch (error) {
+            console.error('Error accessing microphone:', error);
+            alert('Could not access microphone. Please check permissions.');
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+            }
+        }
+    };
+
+    const cancelRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop();
+            mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+            setIsRecording(false);
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+            }
+        }
+        onCancel();
+    };
+
+    const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    useEffect(() => {
+        return () => {
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+            }
+        };
+    }, []);
+
+    return (
+        <div className="bg-gray-900 rounded-lg p-4 border border-pink-500/50">
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                    <Mic className={`w-6 h-6 ${isRecording ? 'text-red-500 animate-pulse' : 'text-pink-500'}`} />
+                    <span className="text-white font-medium">
+                        {isRecording ? 'Recording...' : 'Ready to Record'}
+                    </span>
+                </div>
+                {isRecording && (
+                    <span className="text-red-400 font-mono text-lg">{formatTime(recordingTime)}</span>
+                )}
+            </div>
+
+            <div className="flex space-x-3">
+                {!isRecording ? (
+                    <>
+                        <button
+                            onClick={startRecording}
+                            className="flex-1 bg-gradient-to-r from-red-600 to-pink-600 text-white py-3 rounded-lg hover:from-red-700 hover:to-pink-700 transition-colors font-semibold flex items-center justify-center space-x-2"
+                        >
+                            <Mic className="w-4 h-4" />
+                            <span>Start Recording</span>
+                        </button>
+                        <button
+                            onClick={onCancel}
+                            className="px-6 py-3 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                    </>
+                ) : (
+                    <>
+                        <button
+                            onClick={stopRecording}
+                            className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-colors font-semibold flex items-center justify-center space-x-2"
+                        >
+                            <Square className="w-4 h-4" />
+                            <span>Stop & Save</span>
+                        </button>
+                        <button
+                            onClick={cancelRecording}
+                            className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+};
+
 // ==================== New Message Form (Themed and Media Input) ====================
 const NewMessageForm: React.FC<NewMessageFormProps> = ({ onSubmit, onCancel, initialText = '' }) => {
     const [text, setText] = useState(initialText);
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [recordingFile, setRecordingFile] = useState<File | null>(null);
+    const [showRecorder, setShowRecorder] = useState(false);
+    const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
 
     const imageInputRef = useRef<HTMLInputElement>(null);
     const recordingInputRef = useRef<HTMLInputElement>(null);
+
+    // Clean up audio preview URL when component unmounts or recording changes
+    useEffect(() => {
+        return () => {
+            if (audioPreviewUrl) {
+                URL.revokeObjectURL(audioPreviewUrl);
+            }
+        };
+    }, [audioPreviewUrl]);
 
     const handleSubmit = () => {
         if (text.trim() || imageFile || recordingFile) {
@@ -314,16 +450,59 @@ const NewMessageForm: React.FC<NewMessageFormProps> = ({ onSubmit, onCancel, ini
             setText('');
             setImageFile(null);
             setRecordingFile(null);
-            // Clear file inputs visually after submission
+            setShowRecorder(false);
             if (imageInputRef.current) imageInputRef.current.value = '';
             if (recordingInputRef.current) recordingInputRef.current.value = '';
+            // Clean up preview URL
+            if (audioPreviewUrl) {
+                URL.revokeObjectURL(audioPreviewUrl);
+                setAudioPreviewUrl(null);
+            }
         }
     };
 
-    // Helper to display file name or placeholder
+    const handleRecordingComplete = (file: File) => {
+        // Clean up old preview URL if exists
+        if (audioPreviewUrl) {
+            URL.revokeObjectURL(audioPreviewUrl);
+        }
+        // Clear the file input if it has something
+        if (recordingInputRef.current) {
+            recordingInputRef.current.value = '';
+        }
+        // Create new preview URL
+        const newUrl = URL.createObjectURL(file);
+        setAudioPreviewUrl(newUrl);
+        setRecordingFile(file);
+        setShowRecorder(false);
+    };
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0] || null;
+        if (file) {
+            // Clean up old preview URL if exists
+            if (audioPreviewUrl) {
+                URL.revokeObjectURL(audioPreviewUrl);
+            }
+            // Create new preview URL for uploaded file
+            const newUrl = URL.createObjectURL(file);
+            setAudioPreviewUrl(newUrl);
+            setRecordingFile(file);
+        }
+    };
+
     const getFileLabel = (file: File | null, defaultText: string) => {
         return file ? `✅ ${file.name}` : defaultText;
-    }
+    };
+
+    const removeRecording = () => {
+        setRecordingFile(null);
+        if (audioPreviewUrl) {
+            URL.revokeObjectURL(audioPreviewUrl);
+            setAudioPreviewUrl(null);
+        }
+        if (recordingInputRef.current) recordingInputRef.current.value = '';
+    };
 
     return (
         <div className="bg-gray-800 rounded-xl shadow-xl p-6 mb-8 border border-red-500/50">
@@ -335,9 +514,7 @@ const NewMessageForm: React.FC<NewMessageFormProps> = ({ onSubmit, onCancel, ini
                 className="w-full px-4 py-3 border border-gray-600 rounded-lg mb-4 resize-none bg-gray-700 text-white placeholder-gray-400 focus:ring-red-500 focus:border-red-500"
             />
 
-            {/* --- File Upload Section --- */}
             <div className="flex space-x-4 mb-4">
-                {/* Image Upload Button */}
                 <label
                     htmlFor="image-upload"
                     className="flex-1 cursor-pointer flex items-center justify-center space-x-2 px-4 py-2 border border-gray-600 rounded-lg text-gray-400 hover:bg-gray-700 transition-colors"
@@ -356,26 +533,70 @@ const NewMessageForm: React.FC<NewMessageFormProps> = ({ onSubmit, onCancel, ini
                     />
                 </label>
 
-                {/* Recording Upload Button */}
                 <label
                     htmlFor="recording-upload"
                     className="flex-1 cursor-pointer flex items-center justify-center space-x-2 px-4 py-2 border border-gray-600 rounded-lg text-gray-400 hover:bg-gray-700 transition-colors"
                 >
                     <Mic className="w-5 h-5" />
                     <span className="truncate text-sm">
-                        {getFileLabel(recordingFile, "Add Recording")}
+                        {getFileLabel(recordingFile, "Upload Audio")}
                     </span>
                     <input
                         id="recording-upload"
                         ref={recordingInputRef}
                         type="file"
                         accept="audio/*"
-                        onChange={(e) => setRecordingFile(e.target.files?.[0] || null)}
+                        onChange={handleFileUpload}
                         className="hidden"
                     />
                 </label>
             </div>
-            {/* --- END File Upload Section --- */}
+
+            {!showRecorder && !recordingFile && (
+                <button
+                    onClick={() => setShowRecorder(true)}
+                    className="w-full mb-4 px-4 py-3 border-2 border-pink-500/50 rounded-lg text-pink-400 hover:bg-pink-500/10 transition-colors flex items-center justify-center space-x-2 font-medium"
+                >
+                    <Mic className="w-5 h-5" />
+                    <span>Record Voice Message</span>
+                </button>
+            )}
+
+            {showRecorder && (
+                <div className="mb-4">
+                    <VoiceRecorder
+                        onRecordingComplete={handleRecordingComplete}
+                        onCancel={() => setShowRecorder(false)}
+                    />
+                </div>
+            )}
+
+            {recordingFile && !showRecorder && (
+                <div className="mb-4 bg-gray-900 rounded-lg p-4 border border-pink-500/50">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                            <Mic className="w-5 h-5 text-pink-500" />
+                            <span className="text-gray-300 text-sm font-medium">Recording ready</span>
+                        </div>
+                        <button
+                            onClick={removeRecording}
+                            className="text-red-400 hover:text-red-300 text-sm"
+                        >
+                            Remove
+                        </button>
+                    </div>
+                    {audioPreviewUrl && (
+                        <audio
+                            controls
+                            src={audioPreviewUrl}
+                            className="w-full h-10"
+                            style={{ filter: 'hue-rotate(330deg) saturate(1.5)' }}
+                        >
+                            Your browser does not support the audio element.
+                        </audio>
+                    )}
+                </div>
+            )}
 
             <div className="flex space-x-3">
                 <button
@@ -429,7 +650,6 @@ export const PostingBoard: React.FC = () => {
             const loggedInUser: User = { id: loginData.user.id, loginName: loginData.user.loginName };
             const jwtToken = loginData.token;
 
-            // Save User and Token
             setUser(loggedInUser);
             sessionStorage.setItem('currentUser', JSON.stringify(loggedInUser));
             sessionStorage.setItem('jwtToken', jwtToken);
@@ -438,7 +658,6 @@ export const PostingBoard: React.FC = () => {
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Login failed.';
             alert(errorMessage);
-            // Clear token/user on login failure
             sessionStorage.removeItem('currentUser');
             sessionStorage.removeItem('jwtToken');
         }
@@ -504,7 +723,6 @@ export const PostingBoard: React.FC = () => {
                     {editingMessage && (
                         <NewMessageForm
                             initialText={editingMessage.text}
-                            // NOTE: Current updateMessage only handles text, files are ignored in edit mode.
                             onSubmit={(text) => updateMessage(editingMessage.id, text)}
                             onCancel={() => setEditingMessage(null)}
                         />

@@ -8,13 +8,16 @@ import { PostingBoard } from "./components/PostingBoard.tsx";
 
 // Import the background image
 import NamiBackground from './assets/Nami.png';
+import {Birthday} from "./components/Birthday.tsx";
 
 // Create the router
 const router = createBrowserRouter(
     createRoutesFromElements(
-        <Route path="/" element={<PostingBoard />}>
+        <Route path="/">
             <Route index element={<PostingBoard />} />
-            <Route path="postingboard" element={<PostingBoard />} /> </Route>
+            <Route path="postingboard" element={<PostingBoard />} />
+            <Route path="birthday" element={<Birthday />} />
+        </Route>
     )
 );
 
