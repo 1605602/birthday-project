@@ -70,7 +70,10 @@ public class SecurityConfiguration {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("https://api.beginning.gg/"));
+        configuration.setAllowedOrigins(Arrays.asList(
+                "https://beginning.gg",
+                "https://api.beginning.gg"
+        ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Cache-Control", "Content-Type", "Accept", "Range"));
         configuration.setAllowCredentials(true);
