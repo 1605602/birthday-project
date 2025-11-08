@@ -6,4 +6,4 @@ services:
       - 'POSTGRES_USER=beginning_dot_gg'
       - 'POSTGRES_PASSWORD=dot_gg_password'
     ports:
-      - '5433:5433'
+      - '5432:5432'
