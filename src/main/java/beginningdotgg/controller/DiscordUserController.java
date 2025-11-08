@@ -127,7 +127,7 @@ public class DiscordUserController {
     }
 
     @CrossOrigin(
-            origins = "https://api.beginning.gg/",
+            origins = "https://beginning.gg/",
             allowCredentials = "true",
             methods = {RequestMethod.GET, RequestMethod.OPTIONS}
     )
@@ -157,7 +157,7 @@ public class DiscordUserController {
     }
 
     @CrossOrigin(
-            origins = "https://api.beginning.gg/",
+            origins = "https://beginning.gg/",
             allowCredentials = "true",
             methods = {RequestMethod.GET, RequestMethod.OPTIONS}
     )

@@ -92,7 +92,7 @@ const MessageModal: React.FC<MessageModalProps> = ({ message, onClose }) => {
     const [imageError, setImageError] = useState(false);
     const [audioError, setAudioError] = useState(false);
 
-    const API_BASE_URL = 'http://localhost:8080/api/users';
+    const API_BASE_URL = 'https://api.beginning.gg/api/users';
     const imageSource = message.hasImage
         ? `${API_BASE_URL}/messages/${message.id}/image`
         : null;
@@ -254,7 +254,7 @@ export const Birthday: React.FC = () => {
     const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
     const [showConfetti, setShowConfetti] = useState(true);
 
-    const API_BASE_URL = 'http://localhost:8080/api/users';
+    const API_BASE_URL = 'https://api.beginning.gg/api/users';
 
     const transformMessage = (dto: UserMessageDTO): Message => ({
         id: dto.id,
