@@ -17,7 +17,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "https://api.beginning.gg/", maxAge = 3600, allowCredentials = "true")
+@CrossOrigin(origins = "https://beginning.gg/", maxAge = 3600, allowCredentials = "true")
 public class DiscordUserController {
 
     private final DiscordUserService userService;
