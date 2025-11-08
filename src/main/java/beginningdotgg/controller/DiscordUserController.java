@@ -17,7 +17,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "http://localhost:5173", maxAge = 3600, allowCredentials = "true")
+@CrossOrigin(origins = "https://api.beginning.gg/", maxAge = 3600, allowCredentials = "true")
 public class DiscordUserController {
 
     private final DiscordUserService userService;
@@ -127,7 +127,7 @@ public class DiscordUserController {
     }
 
     @CrossOrigin(
-            origins = "http://localhost:5173",
+            origins = "https://api.beginning.gg/",
             allowCredentials = "true",
             methods = {RequestMethod.GET, RequestMethod.OPTIONS}
     )
@@ -142,7 +142,7 @@ public class DiscordUserController {
             headers.setContentType(contentType);
             headers.setCacheControl("public, max-age=3600");
             headers.setContentLength(fileBytes.length);
-            headers.set("Access-Control-Allow-Origin", "http://localhost:5173");
+            headers.set("Access-Control-Allow-Origin", "https://api.beginning.gg/");
 
             return ResponseEntity
                     .ok()
@@ -157,7 +157,7 @@ public class DiscordUserController {
     }
 
     @CrossOrigin(
-            origins = "http://localhost:5173",
+            origins = "https://api.beginning.gg/",
             allowCredentials = "true",
             methods = {RequestMethod.GET, RequestMethod.OPTIONS}
     )
@@ -173,7 +173,7 @@ public class DiscordUserController {
             headers.setCacheControl("public, max-age=3600");
             headers.setContentLength(fileBytes.length);
             headers.set("Accept-Ranges", "bytes");
-            headers.set("Access-Control-Allow-Origin", "http://localhost:5173");
+            headers.set("Access-Control-Allow-Origin", "https://api.beginning.gg/");
 
             return ResponseEntity
                     .ok()
