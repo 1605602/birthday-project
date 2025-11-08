@@ -27,7 +27,7 @@ public class Application {
 
                 UserMessageDTO message = userService.createMessage(
                         user.getId(),
-                        "You bring life and joy to all of us, may you have the best birthday and may your day be filled with everything you wish for! You are an amazing person worthy of all the praise and love, you're the greatest!",
+                        "Happy birthday! You bring life and joy to all of us, may you have the best birthday and may your day be filled with everything you wish for! You are an amazing person worthy of all the praise and love, you're the greatest!",
                         null,
                         null
                 );
